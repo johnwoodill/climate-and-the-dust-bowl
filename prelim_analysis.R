@@ -24,9 +24,8 @@ wy <- c(56003,56005,56009,56011,56015,46017,56019,56021,56027,56031,56033,56043,
 gp_fips <- c(co, ks, ne, nm, ok, tx, mt, nd, sd, wy)
 db_fips <- c(tx, ok, ks, co, nm)
 
-
-cm <- select(cropdat, year, fips, corn_yield)
-cm <- filter(cm, fips %in% gp_fips)
+cm <- select(cropdat, year, fips, state, corn_yield)
+cm <- filter(cm, state %in% c("tx", "ok", "ks", "co", "nm"))
 cm <- filter(cm, year == 1930)
 cm <- select(cm, fips, corn_yield)
 names(cm) <- c("fips", "value")
@@ -42,8 +41,10 @@ cropdat <- cropdat %>%
          prec_dm = prec - mean(prec, na.rm = TRUE))
 
 # Scatter plots
-ggplot(cropdat, aes(corn_yield, dday0_10, color = state)) + geom_point() + geom_smooth(method = "lm")
-ggplot(cropdat, aes(corn_yield, dday10_30, color = state)) + geom_point() + geom_smooth(method = "lm")
+ggplot(cropdat, aes(log(1 + corn_yield), dday0_10, color = state)) + geom_point() + geom_smooth(method = "lm")
+ggplot(filter(cropdat, state == "co"), aes(corn_yield, dday10_30, color = state)) + 
+  geom_point() + geom_smooth(method = "lm")
+
 ggplot(cropdat, aes(corn_yield, dday30, color = state)) + geom_point() + geom_smooth(method = "lm")
 
 

@@ -304,63 +304,14 @@ head(cropdat)
  dd_dat <- dd_dat %>%
    group_by(year, fips) %>%
    summarise(dday0C = sum(dday0C),
-            dday1C = sum(dday1C),
-            dday2C = sum(dday2C),
-            dday3C = sum(dday3C),
-            dday4C = sum(dday4C),
-            dday5C = sum(dday5C),
-            dday6C = sum(dday6C),
-            dday7C = sum(dday7C),
-            dday8C = sum(dday8C),
-            dday9C = sum(dday9C),
             dday10C = sum(dday10C),
-            dday11C = sum(dday11C),
-            dday12C = sum(dday12C),
-            dday13C = sum(dday13C),
-            dday14C = sum(dday14C),
-            dday15C = sum(dday15C),
-            dday16C = sum(dday16C),
-            dday17C= sum(dday17C),
-            dday18C = sum(dday18C),
-            dday19C = sum(dday19C),
-            dday20C = sum(dday20C),
-            dday21C = sum(dday21C),
-            dday22C = sum(dday22C),
-            dday23C = sum(dday23C),
-            dday24C = sum(dday24C),
-            dday25C = sum(dday25C),
-            dday26C = sum(dday26C),
-            dday27C = sum(dday27C),
-            dday28C = sum(dday28C),
-            dday29C = sum(dday29C),
             dday30C = sum(dday30C),
-            dday31C = sum(dday31C),
-            dday32C = sum(dday32C),
-            dday33C = sum(dday33C),
-            dday34C = sum(dday34C),
-            dday35C = sum(dday35C),
-            ndday0C = sum(ndday0C),
             prec = sum(ppt),
             tavg = mean(tavg),
             tmax = mean(tmax),
             tmin = mean(tmin))
 
 
-# Schlenker and Roberts data
- # dd_dat <- read_dta("data/ddayOverAgAreaByMonth.dta")
- #  dd_dat$year <- as.integer(dd_dat$year)
- #  dd_dat$fips <- as.integer(dd_dat$fips)
- #  dd_dat <- dd_dat %>% 
- #    group_by(year, fips) %>% 
- #    summarise(dday0C = sum(dday0C),
- #               dday8C = sum(dday8C),
- #              dday10C = sum(dday10C),
- #              dday30C = sum(dday30C),
- #              dday32C = sum(dday32C),
- #              dday34C = sum(dday34C),
- #              prec = sum(prec),
- #              tavg = mean(tAvg))
- # 
 
 dd_dat$dday0_10 <- dd_dat$dday0C - dd_dat$dday10C
 dd_dat$dday10_30 <- dd_dat$dday10C - dd_dat$dday30C
@@ -558,11 +509,11 @@ cropdat$p_soybean_a <- cropdat$soybean_a/cropdat$acres
 cropdat$p_wheat_a <- cropdat$wheat_a/cropdat$acres
 
 # Set acres to zero
-cropdat$p_corn_a <- ifelse(is.na(cropdat$p_corn_a), 0, cropdat$p_corn_a)
-cropdat$p_cotton_a <- ifelse(is.na(cropdat$p_cotton_a), 0, cropdat$p_cotton_a)
-cropdat$p_hay_a <- ifelse(is.na(cropdat$p_hay_a), 0, cropdat$p_hay_a)
-cropdat$p_wheat_a <- ifelse(is.na(cropdat$p_wheat_a), 0, cropdat$p_wheat_a)
-cropdat$p_soybean_a <- ifelse(is.na(cropdat$p_soybean_a), 0, cropdat$p_soybean_a)
+# cropdat$p_corn_a <- ifelse(is.na(cropdat$p_corn_a), 0, cropdat$p_corn_a)
+# cropdat$p_cotton_a <- ifelse(is.na(cropdat$p_cotton_a), 0, cropdat$p_cotton_a)
+# cropdat$p_hay_a <- ifelse(is.na(cropdat$p_hay_a), 0, cropdat$p_hay_a)
+# cropdat$p_wheat_a <- ifelse(is.na(cropdat$p_wheat_a), 0, cropdat$p_wheat_a)
+# cropdat$p_soybean_a <- ifelse(is.na(cropdat$p_soybean_a), 0, cropdat$p_soybean_a)
 
 cropdat <- as.data.frame(cropdat)
 
@@ -579,8 +530,11 @@ cropdat$state <- factor(cropdat$state)
 saveRDS(cropdat, "data/full_ag_data.rds")
 fulldat <- readRDS("data/full_ag_data.rds")
 
-
+fulldat <- filter(fulldat, year >= 1950)
 fit<- felm(ln_rev_corn ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq + 
              dday0_10_rm10 + dday10_30_rm10 + dday30_rm10 + prec_rm10 + prec_sq_rm10 +
              trend + trend_sq | fips | 0 |state, data = fulldat, weights = fulldat$acres)
 summary(fit)
+summary(log(cropdat$corn_yield), na.rm = TRUE)
+
+ggplot(fulldat, aes(log(corn_yield), dday10_30, color = state)) + geom_point()
