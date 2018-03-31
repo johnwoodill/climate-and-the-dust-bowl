@@ -41,27 +41,31 @@ cropdat <- cropdat %>%
          prec_dm = prec - mean(prec, na.rm = TRUE))
 
 # Scatter plots
-ggplot(cropdat, aes(log(1 + corn_yield), dday0_10, color = state)) + geom_point() + geom_smooth(method = "lm")
-ggplot(filter(cropdat, state == "co"), aes(corn_yield, dday10_30, color = state)) + 
-  geom_point() + geom_smooth(method = "lm")
 
-ggplot(cropdat, aes(corn_yield, dday30, color = state)) + geom_point() + geom_smooth(method = "lm")
+# Weather
+ggplot(cropdat, aes(corn_yield, dday0_10, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(corn_yield, dday10_30, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(corn_yield, dday30, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(corn_yield, prec, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(corn_yield, prec^2, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
 
 
 # Climate
-ggplot(cropdat, aes(year, dday30_rm10_dm, color = factor(state))) + geom_smooth()
-ggplot(cropdat, aes(year, dday30_rm10_dm)) + geom_smooth()
-ggplot(cropdat, aes(year, dday30)) + geom_smooth()
-
-# Precipitation
-ggplot(cropdat, aes(year, prec_dm, color = factor(state))) + geom_smooth()
+ggplot(cropdat, aes(corn_yield, dday0_10_rm10, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(corn_yield, dday10_30_rm10, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(corn_yield, dday30_rm10, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(corn_yield, prec, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(corn_yield, prec^2, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(corn_yield, prec_rm10, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(corn_yield, prec_rm10^2, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
 
 # Corn yield
 ggplot(cropdat, aes(year, corn_yield_dm, color = factor(state))) + geom_smooth()
 
+regdat <- filter(cropdat, state %in% c("ks", "nm", "co"))
 fit <- felm(log(1 + corn_yield) ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq + 
              trend_lat + trend_long + trend_sq_lat + trend_sq_long | fips | 0 | 0, 
-           data = cropdat, weights = cropdat$corn_grain_a)
+           data = regdat, weights = regdat$corn_grain_a)
 summary(fit)
 
 outdat <- data.frame()

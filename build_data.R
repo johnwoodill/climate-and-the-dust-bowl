@@ -292,24 +292,40 @@ head(cropdat)
 
 # Aggregate county-level degree days -----------------------------------------------
 
- dd <- read_csv("data/fips_degree_days_1900-2013.csv")
- prec <- read_csv("data/fips_precipitation_1900-2013.csv")
+# Full Data
+# dd <- read_csv("data/fips_degree_days_1900-2013.csv")
 
- dd$year <- as.integer(dd$year)
- dd$fips <- as.integer(dd$fips)
- dd_dat <- left_join(dd, prec, by = c("fips", "year", "month"))
- dd_dat <- filter(dd_dat, month >= 3 & month <= 10)
- 
- dd_dat$X1 <- NULL
- dd_dat <- dd_dat %>%
+# Condensed Data
+
+dd <- readRDS("data/sub_fips_degree_days_1900-2013.rds")
+prec <- read_csv("data/fips_precipitation_1900-2013.csv")
+
+dd$year <- as.integer(dd$year)
+dd$fips <- as.integer(dd$fips)
+dd_dat <- left_join(dd, prec, by = c("fips", "year", "month"))
+dd_dat <- filter(dd_dat, month >= 3 & month <= 10)
+
+dd_dat <- dd_dat %>%
    group_by(year, fips) %>%
    summarise(dday0C = sum(dday0C),
             dday10C = sum(dday10C),
             dday30C = sum(dday30C),
-            prec = sum(ppt),
-            tavg = mean(tavg),
-            tmax = mean(tmax),
-            tmin = mean(tmin))
+            prec = sum(ppt))
+
+ 
+# dd <- readRDS("data/wolfram_full_degree_days.rds")
+# 
+# dd_dat <- dd %>% 
+#   filter(month >= 3 & month <= 10) %>% 
+#   group_by(fips, year) %>% 
+#   summarise_all(sum) %>% 
+#   mutate(dday0_10 = dday0C - dday10C,
+#          dday10_30 = dday10C - dday30C,
+#          dday30 = dday30C,
+#          prec = prec) %>% 
+#   select(fips, year, dday0_10, dday10_30, dday30, prec) %>% 
+#   ungroup()
+
 
 
 
