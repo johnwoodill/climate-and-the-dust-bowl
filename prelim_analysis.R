@@ -36,19 +36,37 @@ cropdat <- filter(cropdat, year >= 1910)
 
 cropdat <- cropdat %>% 
   group_by(fips) %>% 
-  mutate(corn_yield_dm = corn_yield - mean(corn_yield, na.rm = TRUE),
+  mutate(dday0_10_dm = dday0_10 - mean(dday0_10, na.rm = TRUE),
+         dday10_30_dm = dday10_30 - mean(dday10_30, na.rm = TRUE),
+         dday30_dm = dday30 - mean(dday30, na.rm = TRUE),
+         prec_dm = prec - mean(prec, na.rm = TRUE),
+         prec_sq_dm = prec_dm^2,
+         corn_yield_dm = corn_yield - mean(corn_yield, na.rm = TRUE),
          dday30_rm10_dm = dday30_rm10 - mean(dday30_rm10, na.rm = TRUE),
          prec_dm = prec - mean(prec, na.rm = TRUE))
 
 # Scatter plots
 
 # Weather
-ggplot(cropdat, aes(corn_yield, dday0_10, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
-ggplot(cropdat, aes(corn_yield, dday10_30, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
-ggplot(cropdat, aes(corn_yield, dday30, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
-ggplot(cropdat, aes(corn_yield, prec, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
-ggplot(cropdat, aes(corn_yield, prec^2, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(log(1+corn_yield), dday0_10_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(log(1+corn_yield), dday10_30_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(log(1+corn_yield), dday30_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(log(1+corn_yield), prec_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(log(1+corn_yield), prec_sq_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
 
+ggplot(cropdat, aes(log(1+corn_yield), dday10_30_dm)) + 
+  theme_tufte(base_size = 10) +
+  ylab("Degree Day 10-30C (w/ County FE)") +
+  xlab("Log(Corn Yield)") +
+  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf, color = "grey") +
+  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey") +
+  geom_point(alpha = 0.25) + 
+  geom_smooth(method = "lm") + 
+  theme(legend.position = "none",
+    # legend.justification = c("left", "top"),
+    legend.box.background = element_rect(colour = "grey"),
+    legend.title = element_blank(), legend.key = element_blank()) 
+  facet_wrap(~state)
 
 # Climate
 ggplot(cropdat, aes(corn_yield, dday0_10_rm10, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
