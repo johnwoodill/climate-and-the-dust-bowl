@@ -9,6 +9,7 @@ source("R/misc_functions.R")
 cropdat <- readRDS("data/full_ag_data.rds")
 cropdat$state <- factor(cropdat$state)
 cropdat <- filter(cropdat, !is.na(corn_grain_a))
+cropdat$decade <- cropdat$year - (cropdat$year %% 10)
 
 # Great Plains Region
 co <- c(8001,8005,8009,8011,8013,8017,8019,8025,8027,8031,8035,8039,8041,8043,8047,8055,8059,8061,8063,8069,8071,8073,8075,8087,8089,8093,8095,8099,8101,8115,8119,8121,8123,8125)
@@ -43,21 +44,29 @@ cropdat <- cropdat %>%
          prec_sq_dm = prec_dm^2,
          corn_yield_dm = corn_yield - mean(corn_yield, na.rm = TRUE),
          dday30_rm10_dm = dday30_rm10 - mean(dday30_rm10, na.rm = TRUE),
-         prec_dm = prec - mean(prec, na.rm = TRUE))
+         prec_dm = prec - mean(prec, na.rm = TRUE),
+         ln_corn_yield = log(1 + corn_yield),
+         w = roll_mean(corn_grain_a, 3, .01)) %>% 
+  filter(ln_corn_yield < 10) %>% 
+  ungroup()
+
+
 
 # Scatter plots
 
+
+
 # Weather
-ggplot(cropdat, aes(log(1+corn_yield), dday0_10_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
-ggplot(cropdat, aes(log(1+corn_yield), dday10_30_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
-ggplot(cropdat, aes(log(1+corn_yield), dday30_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(y=ln_corn_yield, x=dday0_10, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(ln_corn_yield, dday10_30_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+ggplot(cropdat, aes(ln_corn_yield, dday30_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
 ggplot(cropdat, aes(log(1+corn_yield), prec_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
 ggplot(cropdat, aes(log(1+corn_yield), prec_sq_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
 
-ggplot(cropdat, aes(log(1+corn_yield), dday10_30_dm)) + 
+ggplot(cropdat, aes(y = ln_corn_yield, x = dday30_dm)) + 
   theme_tufte(base_size = 10) +
-  ylab("Degree Day 10-30C (w/ County FE)") +
-  xlab("Log(Corn Yield)") +
+  xlab("Degree Day 10-30C (w/ County FE)") +
+  ylab("Log(Corn Yield)") +
   annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf, color = "grey") +
   annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey") +
   geom_point(alpha = 0.25) + 
@@ -65,8 +74,8 @@ ggplot(cropdat, aes(log(1+corn_yield), dday10_30_dm)) +
   theme(legend.position = "none",
     # legend.justification = c("left", "top"),
     legend.box.background = element_rect(colour = "grey"),
-    legend.title = element_blank(), legend.key = element_blank()) 
-  facet_wrap(~state)
+    legend.title = element_blank(), legend.key = element_blank()) +
+  facet_wrap(~decade)
 
 # Climate
 ggplot(cropdat, aes(corn_yield, dday0_10_rm10, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
@@ -80,21 +89,21 @@ ggplot(cropdat, aes(corn_yield, prec_rm10^2, color = state)) + geom_point(alpha 
 # Corn yield
 ggplot(cropdat, aes(year, corn_yield_dm, color = factor(state))) + geom_smooth()
 
-regdat <- filter(cropdat, state %in% c("ks", "nm", "co"))
-fit <- felm(log(1 + corn_yield) ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq + 
-             trend_lat + trend_long + trend_sq_lat + trend_sq_long | fips | 0 | 0, 
-           data = regdat, weights = regdat$corn_grain_a)
+# regdat <- filter(cropdat, state %in% c("ks", "nm", "co"))
+fit <- felm(ln_corn_yield ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq + 
+             trend_lat + trend_long + trend_sq_lat + trend_sq_long | fips | 0 | state, 
+           data = cropdat, weights = cropdat$w)
 summary(fit)
 
 outdat <- data.frame()
 for (i in seq(1910, 2000, 10)){
   regdat <- filter(cropdat, year >= i & year <= i + 10)
   
-  fit <- felm(log(1 + corn_yield) ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq + 
+  fit <- felm(ln_corn_yield ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq + 
              trend_lat + trend_long + trend_sq_lat + trend_sq_long | fips | 0 | state, 
            data = regdat, psdef=FALSE, weights = regdat$corn_grain_a)
-  coef <- 100*fit$coefficients[3]
-  se <- 100*fit$se[3]
+  coef <- 100*fit$coefficients[2]
+  se <- 100*fit$se[2]
   indat <- data.frame(year = i, coef = coef, se = se)
   outdat <- rbind(outdat, indat)
 }
