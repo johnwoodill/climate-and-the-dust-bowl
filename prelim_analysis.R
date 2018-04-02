@@ -2,6 +2,7 @@ library(ggplot2)
 library(ggthemes)
 library(choroplethr)
 library(tidyverse)
+library(RcppRoll)
 library(lfe)
 
 source("R/misc_functions.R")
@@ -63,7 +64,7 @@ ggplot(cropdat, aes(ln_corn_yield, dday30_dm, color = state)) + geom_point(alpha
 ggplot(cropdat, aes(log(1+corn_yield), prec_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
 ggplot(cropdat, aes(log(1+corn_yield), prec_sq_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
 
-ggplot(cropdat, aes(y = ln_corn_yield, x = dday30_dm)) + 
+ggplot(cropdat, aes(y = ln_corn_yield, x = dday10_30_dm)) + 
   theme_tufte(base_size = 10) +
   xlab("Degree Day 10-30C (w/ County FE)") +
   ylab("Log(Corn Yield)") +
@@ -102,8 +103,8 @@ for (i in seq(1910, 2000, 10)){
   fit <- felm(ln_corn_yield ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq + 
              trend_lat + trend_long + trend_sq_lat + trend_sq_long | fips | 0 | state, 
            data = regdat, psdef=FALSE, weights = regdat$corn_grain_a)
-  coef <- 100*fit$coefficients[2]
-  se <- 100*fit$se[2]
+  coef <- 100*fit$coefficients[3]
+  se <- 100*fit$se[3]
   indat <- data.frame(year = i, coef = coef, se = se)
   outdat <- rbind(outdat, indat)
 }
