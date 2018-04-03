@@ -33,7 +33,7 @@ cm <- select(cm, fips, corn_yield)
 names(cm) <- c("fips", "value")
 check_map(cm)
 
-cropdat <- filter(cropdat, fips %in% db_fips)
+cropdat <- filter(cropdat, fips %in% gp_fips)
 cropdat <- filter(cropdat, year >= 1910)
 
 cropdat <- cropdat %>% 
@@ -51,11 +51,8 @@ cropdat <- cropdat %>%
   filter(ln_corn_yield < 10) %>% 
   ungroup()
 
-
-
 # Scatter plots
-
-
+ggplot(cropdat, aes(year, log(value_landbuildings), color = state)) + geom_smooth()
 
 # Weather
 ggplot(cropdat, aes(y=ln_corn_yield, x=dday0_10, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
@@ -64,7 +61,7 @@ ggplot(cropdat, aes(ln_corn_yield, dday30_dm, color = state)) + geom_point(alpha
 ggplot(cropdat, aes(log(1+corn_yield), prec_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
 ggplot(cropdat, aes(log(1+corn_yield), prec_sq_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
 
-ggplot(cropdat, aes(y = ln_corn_yield, x = dday10_30_dm)) + 
+ggplot(cropdat, aes(y = ln_corn_yield, x = dday30_dm)) + 
   theme_tufte(base_size = 10) +
   xlab("Degree Day 10-30C (w/ County FE)") +
   ylab("Log(Corn Yield)") +
@@ -100,9 +97,9 @@ outdat <- data.frame()
 for (i in seq(1910, 2000, 10)){
   regdat <- filter(cropdat, year >= i & year <= i + 10)
   
-  fit <- felm(ln_corn_yield ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq + 
+  fit <- felm(log(value_landbuildings) ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq + 
              trend_lat + trend_long + trend_sq_lat + trend_sq_long | fips | 0 | state, 
-           data = regdat, psdef=FALSE, weights = regdat$corn_grain_a)
+           data = regdat, psdef=FALSE, weights = regdat$w)
   coef <- 100*fit$coefficients[3]
   se <- 100*fit$se[3]
   indat <- data.frame(year = i, coef = coef, se = se)
@@ -121,4 +118,28 @@ ggplot(outdat, aes(year, coef)) +
   scale_x_continuous(breaks = c(seq(1910, 2000, 10))) +
   annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf, color = "grey") +
   annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey")
+
+
+cropdat <- cropdat %>% 
+  group_by(fips) %>% 
+  arrange(year) %>% 
+  mutate(ln_corn_yield_lag = lag(ln_corn_yield, 1))
+
+thirty <- filter(cropdat, year >= 1930 & year <= 1939)
+
+thirty <- thirty %>% 
+  group_by(fips) %>% 
+  mutate(corn_yield_avg = mean(corn_yield, na.rm = TRUE)) %>% 
+  select(fips, corn_yield_avg)
+
+cropdat <- left_join(cropdat, thirty, by = c("fips"))
+cropdat$diff_corn_yield <- cropdat$corn_yield - cropdat$corn_yield_avg
+
+ggplot(filter(cropdat, year >= 1940), aes(year, corn_yield)) + geom_smooth()
+
+fit <- felm(log(value_landbuildings) ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq + 
+              dday0_10_rm10 + dday10_30_rm10 + dday30_rm10 + prec_rm10 + prec_sq_rm10 +
+              trend_lat + trend_long + trend_sq_lat + trend_sq_long | fips | 0 | state, 
+           data = cropdat, psdef=FALSE)
+summary(fit)
 
