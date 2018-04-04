@@ -217,7 +217,8 @@ extract_d_county <- function(x){
 #-----------------------------------------------------
 # # Merge historical Haines data
 hdat <- read_dta("data/DustBowl_All_base1910.dta")
-hdat <- select(hdat, year, fips, corn_grain_a, corn_grain_y, cotton_a, cotton_y, hay_a, hay_y, wheat_a, wheat_y, value_landbuildings)
+hdat <- select(hdat, year, fips, corn_grain_a, corn_grain_y, cotton_a, cotton_y, 
+               hay_a, hay_y, wheat_a, wheat_y, value_landbuildings, value_crops)
 hdat[hdat == 0] <- NA
 
 #hains_dat <- select(hains_dat, year, fips, cropland_harvested)
@@ -235,7 +236,7 @@ names(mdat) <- c("year", "fips")
 mdat <- left_join(mdat, hdat, by = c("fips", "year"))
 head(mdat)
 
-names(mdat)[3:11] <- c("corn_grain_a", "corn_grain_p", "cotton_a", "cotton_p", "hay_a", "hay_p", "wheat_a", "wheat_p", "value_landbuildings")
+names(mdat)[3:12] <- c("corn_grain_a", "corn_grain_p", "cotton_a", "cotton_p", "hay_a", "hay_p", "wheat_a", "wheat_p", "value_landbuildings", "value_crops")
 
 # ensure corn acres and production have values and one is not NA to outlier data
 mdat$corn_grain_p <- ifelse(is.na(mdat$corn_grain_a), NA, mdat$corn_grain_p)
@@ -252,7 +253,8 @@ mdat <- mdat %>%
          hay_p = na.approx(hay_p, na.rm = FALSE),
          wheat_a = na.approx(wheat_a, na.rm = FALSE),
          wheat_p = na.approx(wheat_p, na.rm = FALSE),
-         value_landbuildings = na.approx(value_landbuildings, na.rm = FALSE)) %>%
+         value_landbuildings = na.approx(value_landbuildings, na.rm = FALSE),
+         value_crops = na.approx(value_crops, na.rm = FALSE)) %>%
    ungroup()
 head(mdat)
 
@@ -416,7 +418,7 @@ fulldat <- select(fulldat, year, state, fips, ers_region, crd, lat, long, gdp_pr
                   hay_a, hay_p, hay_yield, hay_nprice, hay_rprice, hay_mrev, hay_rrev, hay_nrev,
                   wheat_a, wheat_p, wheat_yield, wheat_nprice, wheat_rprice, wheat_mrev, wheat_rrev, wheat_nrev,
                   soybean_a, soybean_p, soybean_yield, soybean_nprice, soybean_rprice, soybean_mrev, soybean_rrev, soybean_nrev,
-                  value_landbuildings)
+                  value_landbuildings, value_crops)
 
 
 # Merge degree days
