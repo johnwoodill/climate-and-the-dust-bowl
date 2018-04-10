@@ -88,7 +88,7 @@ ggplot(cropdat, aes(year, dday10_30_dm, color = state)) + geom_smooth() +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey") +
   theme_tufte(base_size = 12) +
   xlab(NULL) +
-  ylab("Corn Yield (w/ County FE)") +
+  ylab("Degree Day 10-30 (w/ County FE)") +
   annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf, color = "grey") +
   annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey") +
   scale_x_continuous(breaks = seq(1910, 2010, 10)) +
@@ -101,7 +101,7 @@ ggplot(cropdat, aes(year, dday30_dm, color = state)) + geom_smooth() +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey") +
   theme_tufte(base_size = 12) +
   xlab(NULL) +
-  ylab("Corn Yield (w/ County FE)") +
+  ylab("Degree Day 30C (w/ County FE)") +
   annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf, color = "grey") +
   annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey") +
   scale_x_continuous(breaks = seq(1910, 2010, 10)) +
