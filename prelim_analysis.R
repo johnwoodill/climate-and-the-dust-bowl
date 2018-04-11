@@ -50,7 +50,7 @@ cropdat <- cropdat %>%
          prec_dm = prec - mean(prec, na.rm = TRUE),
          prec_sq_dm = prec_dm^2,
          corn_yield_dm = corn_yield - mean(corn_yield, na.rm = TRUE),
-         dday30_rm10_dm = dday30_rm10 - mean(dday30_rm10, na.rm = TRUE),
+         # dday30_rm10_dm = dday30_rm10 - mean(dday30_rm10, na.rm = TRUE),
          prec_dm = prec - mean(prec, na.rm = TRUE),
          ln_corn_yield = log(1 + corn_yield),
          ln_corn_yield_dm = ln_corn_yield - mean(ln_corn_yield, na.rm = TRUE),
@@ -84,7 +84,7 @@ ggplot(cropdat, aes(year, corn_yield_dm, color = state)) + geom_smooth() +
     legend.title = element_blank(), legend.key = element_blank()) 
 ggsave("figures/corn_yield_ts.pdf", width = 6, height = 4) 
 
-ggplot(cropdat, aes(year, dday10_30_dm, color = state)) + geom_smooth() +
+ggplot(cropdat, aes(year, dday10_30, color = state)) + geom_smooth() +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey") +
   theme_tufte(base_size = 12) +
   xlab(NULL) +
@@ -97,7 +97,7 @@ ggplot(cropdat, aes(year, dday10_30_dm, color = state)) + geom_smooth() +
     legend.box.background = element_rect(colour = "grey"),
     legend.title = element_blank(), legend.key = element_blank()) 
 
-ggplot(cropdat, aes(year, dday30_dm, color = state)) + geom_smooth() +
+ggplot(cropdat, aes(year, dday30, color = state)) + geom_smooth() +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey") +
   theme_tufte(base_size = 12) +
   xlab(NULL) +
@@ -225,14 +225,13 @@ fit <- felm(ln_corn_yield ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq +
 summary(fit)
 
 outdat <- data.frame()
-for (i in seq(1910, 2000, 10)){
-  regdat <- filter(cropdat, year >= i & year <= i + 10)
+for (i in unique(cropdat$year)){
+  regdat <- filter(cropdat, year == i)
   
-  fit <- felm(ln_corn_yield ~ dday10_30 + dday30 + prec + prec_sq + 
-             trend_lat + trend_long + trend_sq_lat + trend_sq_long | fips | 0 | state, 
+  fit <- felm(ln_corn_yield ~ dday10_30 + dday30 + prec + prec_sq | state | 0 | 0, 
            data = regdat, psdef=FALSE, weights = regdat$w)
-  coef <- 100*fit$coefficients[1]
-  se <- 100*fit$se[1]
+  coef <- 100*fit$coefficients[2]
+  se <- 100*fit$se[2]
   indat <- data.frame(year = i, coef = coef, se = se)
   outdat <- rbind(outdat, indat)
 }
@@ -268,11 +267,41 @@ cropdat$diff_corn_yield <- cropdat$corn_yield - cropdat$corn_yield_avg
 
 ggplot(filter(cropdat, year >= 1940), aes(year, corn_yield)) + geom_smooth()
 
-fit <- felm(log(corn_yield) ~ dday10_30 + dday30 + prec + prec_sq + trend + trend_sq
+fit <- felm(ln_corn_yield ~ dday10_30 + dday30 + prec + prec_sq + state:year + state:I(year^2)
               # dday0_10_rm10 + dday10_30_rm10 + dday30_rm10 + prec_rm10 + prec_sq_rm10 +
                | fips | 0 | state, 
            data = cropdat, psdef=FALSE, weights = cropdat$corn_grain_a)
+
+fit <- felm(ln_corn_yield ~ dday10_30 + dday30  + prec + prec_sq + state:year + state:I(year^2) +
+            d_1910:(prec) + d_1920:(prec) + d_1925:(prec) + d_1910:(prec) + 
+            d_1935:(prec) + d_1940:(prec) + d_1945:(prec) + d_1950:(prec) + 
+            d_1954:(prec) + d_1959:(prec) + d_1964:(prec) + 
+            d_1978:(prec) + d_1982:(prec) + d_1987:(prec) +
+            d_1992:(prec) + d_1997:(prec) +
+              
+            d_1910:(prec^2) + d_1920:(prec^2) + d_1925:(prec^2) + d_1910:(prec^2) + 
+            d_1935:(prec^2) + d_1940:(prec^2) + d_1945:(prec^2) + d_1950:(prec^2) + 
+            d_1954:(prec^2) + d_1959:(prec^2) + d_1964:(prec^2) + 
+            d_1978:(prec^2) + d_1982:(prec^2) + d_1987:(prec^2) +
+            d_1992:(prec^2) + d_1997:(prec^2) +
+              
+            d_1910:(dday10_30) + d_1920:(dday10_30) + d_1925:(dday10_30) + d_1910:(dday10_30) + 
+            d_1935:(dday10_30) + d_1940:(dday10_30) + d_1945:(dday10_30) + d_1950:(dday10_30) + 
+            d_1954:(dday10_30) + d_1959:(dday10_30) + d_1964:(dday10_30) + 
+            d_1978:(dday10_30) + d_1982:(dday10_30) + d_1987:(dday10_30) +
+            d_1992:(dday10_30) + d_1997:(dday10_30) +
+            
+            d_1910:(dday30) + d_1920:(dday30) + d_1925:(dday30) + d_1930:(dday30) + 
+            d_1935:(dday30) + d_1940:(dday30) + d_1945:(dday30) + d_1950:(dday30) + 
+            d_1954:(dday30) + d_1959:(dday30) + d_1964:(dday30) + 
+            d_1978:(dday30) + d_1982:(dday30) + d_1987:(dday30) +
+            d_1992:(dday30) + d_1997:(dday30) | fips | 0 | 0, 
+           data = cropdat, psdef=FALSE, weights = cropdat$corn_grain_a)
+
+
 summary(fit)
+test <- filter(cropdat, year == 1920)
+felm(ln_corn_yield ~ dday10_30 + dday30 + prec + prec_sq | state | 0 | 0, data = test, weights = test$corn_grain_a)
 
 
 
