@@ -40,7 +40,7 @@ ggsave("figures/map_counties.pdf", width = 6, height = 6)
 
 cropdat <- filter(cropdat, fips %in% gp_fips)
 cropdat <- filter(cropdat, year >= 1910 & year <= 2010)
-cropdat$region <- ifelse(cropdat$fips %in% db_fips, "Dust Bowl", "N. Great Plains")
+cropdat$region <- ifelse(cropdat$fips %in% db_fips, 1, 0)
 
 cropdat <- cropdat %>% 
   group_by(fips) %>% 
@@ -62,11 +62,10 @@ cropdat <- cropdat %>%
   filter(ln_corn_yield < 10) %>% 
   ungroup()
 
-# Weather
-ggplot(cropdat, aes(y=ln_corn_yield, x=dday0_10, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
-ggplot(cropdat, aes(ln_corn_yield, dday10_30_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
-ggplot(cropdat, aes(ln_corn_yield, dday30_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
-ggplot(cropdat, aes(log(1+corn_yield), prec_dm, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+
+# Maps
+
+
 
 #----------------------------------------------------------------------
 # Corn Yield
@@ -228,8 +227,9 @@ outdat <- data.frame()
 for (i in unique(cropdat$year)){
   regdat <- filter(cropdat, year == i)
   
-  fit <- felm(ln_corn_yield ~ dday10_30 + dday30 + prec + prec_sq | state | 0 | 0, 
-           data = regdat, psdef=FALSE, weights = regdat$w)
+  fit <- felm(ln_corn_yield ~ dday10_30 + dday30 + prec + prec_sq + 
+                dday0_10_rm10 + dday10_30_rm10 + dday30_rm10 + prec_rm10 + prec_sq_rm10 | state | 0 | 0, 
+           data = regdat, psdef=FALSE, weights = regdat$corn_grain_a)
   coef <- 100*fit$coefficients[2]
   se <- 100*fit$se[2]
   indat <- data.frame(year = i, coef = coef, se = se)
@@ -267,30 +267,13 @@ cropdat$diff_corn_yield <- cropdat$corn_yield - cropdat$corn_yield_avg
 
 ggplot(filter(cropdat, year >= 1940), aes(year, corn_yield)) + geom_smooth()
 
-fit <- felm(ln_corn_yield ~ dday10_30 + dday30 + prec + prec_sq + state:year + state:I(year^2)
-              # dday0_10_rm10 + dday10_30_rm10 + dday30_rm10 + prec_rm10 + prec_sq_rm10 +
-               | fips | 0 | state, 
-           data = cropdat, psdef=FALSE, weights = cropdat$corn_grain_a)
+fit <- felm(ln_corn_yield ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq + region
+               | 0 | 0 | 0, 
+           data = cropdat, weights = cropdat$w)
 
-fit <- felm(ln_corn_yield ~ dday10_30 + dday30  + prec + prec_sq + state:year + state:I(year^2) +
-            d_1910:(prec) + d_1920:(prec) + d_1925:(prec) + d_1910:(prec) + 
-            d_1935:(prec) + d_1940:(prec) + d_1945:(prec) + d_1950:(prec) + 
-            d_1954:(prec) + d_1959:(prec) + d_1964:(prec) + 
-            d_1978:(prec) + d_1982:(prec) + d_1987:(prec) +
-            d_1992:(prec) + d_1997:(prec) +
-              
-            d_1910:(prec^2) + d_1920:(prec^2) + d_1925:(prec^2) + d_1910:(prec^2) + 
-            d_1935:(prec^2) + d_1940:(prec^2) + d_1945:(prec^2) + d_1950:(prec^2) + 
-            d_1954:(prec^2) + d_1959:(prec^2) + d_1964:(prec^2) + 
-            d_1978:(prec^2) + d_1982:(prec^2) + d_1987:(prec^2) +
-            d_1992:(prec^2) + d_1997:(prec^2) +
-              
-            d_1910:(dday10_30) + d_1920:(dday10_30) + d_1925:(dday10_30) + d_1910:(dday10_30) + 
-            d_1935:(dday10_30) + d_1940:(dday10_30) + d_1945:(dday10_30) + d_1950:(dday10_30) + 
-            d_1954:(dday10_30) + d_1959:(dday10_30) + d_1964:(dday10_30) + 
-            d_1978:(dday10_30) + d_1982:(dday10_30) + d_1987:(dday10_30) +
-            d_1992:(dday10_30) + d_1997:(dday10_30) +
-            
+summary(fit)
+
+fit <- felm(ln_corn_yield ~ state:year + state:I(year^2) +
             d_1910:(dday30) + d_1920:(dday30) + d_1925:(dday30) + d_1930:(dday30) + 
             d_1935:(dday30) + d_1940:(dday30) + d_1945:(dday30) + d_1950:(dday30) + 
             d_1954:(dday30) + d_1959:(dday30) + d_1964:(dday30) + 
@@ -300,8 +283,29 @@ fit <- felm(ln_corn_yield ~ dday10_30 + dday30  + prec + prec_sq + state:year + 
 
 
 summary(fit)
-test <- filter(cropdat, year == 1920)
+test <- filter(cropdat, year == 1910)
 felm(ln_corn_yield ~ dday10_30 + dday30 + prec + prec_sq | state | 0 | 0, data = test, weights = test$corn_grain_a)
 
+test <- filter(cropdat, year == 1910)
+test <- filter(test, !is.na(corn_yield))
+test <- filter(test, !is.na(region))
+test <- as.data.frame(test)
+test <- dplyr::select(test, region, corn_yield)
 
+md <- matchit(region ~ corn_yield, data = test, method="nearest", ratio=1)
+summary(md)
+md$match.matrix
+md$match.matrix
+md$discarded
 
+ggplot(cropdat, aes(factor(year), corn_yield_dm, color = factor(region))) + geom_boxplot()
+  
+
+dat1 <- match.data(md, group = "control")
+dat2 <- match.data(md, group = "treat")
+
+mean(dat1$corn_yield)
+mean(dat2$corn_yield)
+
+head(arrange(dat1, distance))
+head(arrange(dat2, distance))

@@ -23,12 +23,12 @@ dummyCreator <- function(invec, prefix = NULL) {
 data(county.fips) 
 county.fips$state <- sapply(str_split(county.fips$polyname, ","),'[',1)
 county.fips$county <- sapply(str_split(county.fips$polyname, ","),'[',2)
-county.fips <- select(county.fips, fips, county, state)
+county.fips <- dplyr::select(county.fips, fips, county, state)
 
 data(zip_codes)
-zip_codes <- select(zip_codes, fips, latitude, longitude)
+zip_codes <- dplyr::select(zip_codes, fips, latitude, longitude)
 zip_codes <- zip_codes[!duplicated(zip_codes[,1:3]),]
-names(zip_codes) <- c("county", "lat", "long")
+names(zip_codes) <- c("fips", "lat", "long")
 zip_codes <- zip_codes %>% 
   group_by(county) %>% 
   summarise(lat = mean(lat, na.rm = TRUE),
@@ -36,7 +36,7 @@ zip_codes <- zip_codes %>%
 
 # Get all combinations of years and states
 data(states)
-stateabb <- select(states, state, name)
+stateabb <- dplyr::select(states, state, name)
 stateabb$state <- tolower(stateabb$state)
 stateabb$name <- tolower(stateabb$name)
 
@@ -92,7 +92,7 @@ stateabb$name <- tolower(stateabb$name)
 #-----------------------------------------------------
 # Merge historical Haines data
 hdat <- read_dta("data/DustBowl_All_base1910.dta")
-hdat <- select(hdat, year, fips, corn_grain_a, corn_grain_y, cotton_a, cotton_y,
+hdat <- dplyr::select(hdat, year, fips, corn_grain_a, corn_grain_y, cotton_a, cotton_y,
                hay_a, hay_y, wheat_a, wheat_y, value_landbuildings, value_crops)
 # hdat[hdat == 0] <- NA
 
@@ -103,6 +103,7 @@ hdat$fips <- as.integer(hdat$fips)
 names(hdat)[3:12] <- c("corn_grain_a", "corn_grain_p", "cotton_a", "cotton_p", "hay_a",
                        "hay_p", "wheat_a", "wheat_p", "value_landbuildings", "value_crops")
 
+hdat <- left_join(hdat, zip_codes, by = c("fips"))
 cropdat <- hdat
 
 # expand grid data
@@ -198,7 +199,7 @@ dd_dat <- dd_dat %>%
          dday30 = dday30C,
          prec = ppt,
          prec_sq = ppt^2) %>%
-  select(fips, year, dday0_10, dday10_30, dday30, prec, prec_sq) %>%
+  dplyr::select(fips, year, dday0_10, dday10_30, dday30, prec, prec_sq) %>%
   ungroup()
 
 #  
@@ -230,35 +231,23 @@ dd_dat <- dd_dat %>%
 # Roll.mean intervals
 
 # Lag one so current year is not included
-# dd_dat <- dd_dat %>% 
-#   group_by(fips) %>% 
-#   arrange(-year) %>% 
-#   mutate(dday0_10_lag1 = lag(dday0_10),
-#          dday10_30_lag1 = lag(dday10_30),
-#          dday30_lag1 = lag(dday30),
-#          prec_lag1 = lag(prec))
-# 
-# dd_dat <- dd_dat %>% 
-#   group_by(fips) %>% 
-#   arrange(year) %>% 
-#   mutate(dday0_10_rm10 = roll_mean(dday0_10_lag1, 10, align = "right", fill = "NA"),
-#          dday10_30_rm10 = roll_mean(dday10_30_lag1, 10, align = "right", fill = "NA"),
-#          dday30_rm10 = roll_mean(dday30_lag1, 10, align = "right", fill = "NA"),
-#          prec_rm10 = roll_mean(prec_lag1, 10, align = "right", fill = "NA"),
-#          prec_sq_rm10 = prec_rm10^2,
-#          
-#          dday0_10_rm11 = roll_mean(dday0_10_lag1, 11, align = "right", fill = "NA"),
-#          dday10_30_rm11 = roll_mean(dday10_30_lag1, 11, align = "right", fill = "NA"),
-#          dday30_rm11 = roll_mean(dday30_lag1, 11, align = "right", fill = "NA"),
-#          prec_rm11 = roll_mean(prec_lag1, 11, align = "right", fill = "NA"),
-#          prec_sq_rm11 = prec_rm11^2,
-#          
-#          dday0_10_rm12 = roll_mean(dday0_10_lag1, 12, align = "right", fill = "NA"),
-#          dday10_30_rm12 = roll_mean(dday10_30_lag1, 12, align = "right", fill = "NA"),
-#          dday30_rm12 = roll_mean(dday30_lag1, 12, align = "right", fill = "NA"),
-#          prec_rm12 = roll_mean(prec_lag1, 12, align = "right", fill = "NA"),
-#          prec_sq_rm12 = prec_rm12^2) %>% 
-#   ungroup()
+dd_dat <- dd_dat %>%
+  group_by(fips) %>%
+  arrange(-year) %>%
+  mutate(dday0_10_lag1 = lag(dday0_10),
+         dday10_30_lag1 = lag(dday10_30),
+         dday30_lag1 = lag(dday30),
+         prec_lag1 = lag(prec))
+
+dd_dat <- dd_dat %>%
+  group_by(fips) %>%
+  arrange(year) %>%
+  mutate(dday0_10_rm10 = roll_mean(dday0_10_lag1, 10, align = "right", fill = "NA"),
+         dday10_30_rm10 = roll_mean(dday10_30_lag1, 10, align = "right", fill = "NA"),
+         dday30_rm10 = roll_mean(dday30_lag1, 10, align = "right", fill = "NA"),
+         prec_rm10 = roll_mean(prec_lag1, 10, align = "right", fill = "NA"),
+         prec_sq_rm10 = prec_rm10^2) %>%
+  ungroup()
 
 fulldat <- left_join(cropdat, dd_dat, by = c("fips", "year"))
 
