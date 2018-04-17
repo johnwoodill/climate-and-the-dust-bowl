@@ -6,6 +6,7 @@ library(maps)
 library(grid)
 library(lfe)
 library(haven)
+library(gganimate)
 
 source("R/predictFelm.R")
 
@@ -18,11 +19,16 @@ zip_codes <- zip_codes %>%
   summarise(lat = mean(lat, na.rm = TRUE),
             long = mean(long, na.rm = TRUE))
 
-dat <- read_csv("data/corn_1910-2016.csv")
-dat <- left_join(dat, zip_codes, by = c("fips"))
-dat$decade <- dat$year - (dat$year %% 10)
+# dat <- read_csv("data/corn_1910-2016.csv")
+# dat <- left_join(dat, zip_codes, by = c("fips"))
+# dat$decade <- dat$year - (dat$year %% 10)
+# dat <- filter(dat, year >= 1930)
 # dat <- filter(dat, abs(long) <= 100)
-dat <- filter(dat, fips %in% gp_fips)
+# # dat <- filter(dat, fips %in% gp_fips)
+# dat$year <- as.numeric(dat$year)
+
+dat <- readRDS("data/full_ag_data.rds")
+dat$decade <- dat$year - (dat$year %% 10)
 
 # Aggregate county-level degree days -----------------------------------------------
 
@@ -31,62 +37,78 @@ dat <- filter(dat, fips %in% gp_fips)
 
 # Condensed Data
 
-dd <- readRDS("data/sub_fips_degree_days_1900-2013.rds")
-prec <- read_csv("data/fips_precipitation_1900-2013.csv")
+# dd <- readRDS("data/sub_fips_degree_days_1900-2013.rds")
+# prec <- read_csv("data/fips_precipitation_1900-2013.csv")
+# 
+# # dd <- read_dta("data/ddayByYearandFips_noweights.dta")
+# 
+# dd$year <- as.integer(dd$year)
+# dd$fips <- as.integer(dd$fips)
+# dd_dat <- left_join(dd, prec, by = c("fips", "year", "month"))
+# 
+# dd_dat <- dd_dat %>%
+#   filter(month >= 3 & month <= 8) %>%
+#   group_by(fips, year) %>%
+#   summarise_all(sum) %>%
+#   mutate(dday0_10 = dday0C - dday10C,
+#          dday10_30 = dday10C - dday30C,
+#          dday30 = dday30C,
+#          prec = ppt,
+#          prec_sq = ppt^2) %>%
+#   dplyr::select(fips, year, dday0_10, dday10_30, dday30, prec, prec_sq) %>%
+#   ungroup()
 
-# dd <- read_dta("data/ddayByYearandFips_noweights.dta")
-
-dd$year <- as.integer(dd$year)
-dd$fips <- as.integer(dd$fips)
-dd_dat <- left_join(dd, prec, by = c("fips", "year", "month"))
-
-dd_dat <- dd_dat %>%
-  filter(month >= 3 & month <= 8) %>%
-  group_by(fips, year) %>%
-  summarise_all(sum) %>%
-  mutate(dday0_10 = dday0C - dday10C,
-         dday10_30 = dday10C - dday30C,
-         dday30 = dday30C,
-         prec = ppt,
-         prec_sq = ppt^2) %>%
-  dplyr::select(fips, year, dday0_10, dday10_30, dday30, prec, prec_sq) %>%
-  ungroup()
-
-# Lag one so current year is not included
-dd_dat <- dd_dat %>%
-  group_by(fips) %>%
-  arrange(-year) %>%
-  mutate(dday0_10_lag1 = lag(dday0_10),
-         dday10_30_lag1 = lag(dday10_30),
-         dday30_lag1 = lag(dday30),
-         prec_lag1 = lag(prec))
-
-dd_dat <- dd_dat %>%
-  group_by(fips) %>%
-  arrange(year) %>%
-  mutate(dday0_10_rm10 = roll_mean(dday0_10_lag1, 10, align = "right", fill = "NA"),
-         dday10_30_rm10 = roll_mean(dday10_30_lag1, 10, align = "right", fill = "NA"),
-         dday30_rm10 = roll_mean(dday30_lag1, 10, align = "right", fill = "NA"),
-         prec_rm10 = roll_mean(prec_lag1, 10, align = "right", fill = "NA"),
-         prec_sq_rm10 = prec_rm10^2) %>%
-  ungroup()
-
-dat <- left_join(dat, dd_dat, by = c("fips", "year"))
+# 
+# dd <- read_dta("data/FULL_ddayByYearandFips_noweights.dta")
+# 
+# dd_dat <- dd %>%
+#   # filter(month >= 3 & month <= 10) %>%
+#   # group_by(fips, year) %>%
+#   # summarise_all(sum) %>%
+#   mutate(dday0_10 = dday0C - dday10C,
+#          dday10_30 = dday10C - dday30C,
+#          dday30 = dday30C,
+#          prec = prec,
+#          prec_sq = prec^2) %>%
+#   select(fips, year, dday0_10, dday10_30, dday30, prec, prec_sq) %>%
+#   ungroup()
+# 
+# # Lag one so current year is not included
+# dd_dat <- dd_dat %>%
+#   group_by(fips) %>%
+#   arrange(-year) %>%
+#   mutate(dday0_10_lag1 = lag(dday0_10),
+#          dday10_30_lag1 = lag(dday10_30),
+#          dday30_lag1 = lag(dday30),
+#          prec_lag1 = lag(prec))
+# 
+# dd_dat <- dd_dat %>%
+#   group_by(fips) %>%
+#   arrange(year) %>%
+#   mutate(dday0_10_rm10 = roll_mean(dday0_10_lag1, 10, align = "right", fill = "NA"),
+#          dday10_30_rm10 = roll_mean(dday10_30_lag1, 10, align = "right", fill = "NA"),
+#          dday30_rm10 = roll_mean(dday30_lag1, 10, align = "right", fill = "NA"),
+#          prec_rm10 = roll_mean(prec_lag1, 10, align = "right", fill = "NA"),
+#          prec_sq_rm10 = prec_rm10^2) %>%
+#   ungroup()
+# 
+# dat <- left_join(dat, dd_dat, by = c("fips", "year"))
 dat$trend <- dat$year - (min(dat$year - 1))
 dat$trend_sq <- dat$trend^2
-dat$corn_yield <- (dat$corn_grain_p/dat$corn_grain_a)
-dat$ln_corn_yield <- log(1 + dat$corn_yield)
+# dat$corn_yield <- (dat$corn_grain_p/dat$corn_grain_a)
+# dat$ln_corn_yield <- log(1 + dat$corn_yield)
 dat$ln_corn_grain_a <- log(dat$corn_grain_a)
 dat <- filter(dat, !is.na(corn_grain_a))
 dat <- as.data.frame(dat)
-
+# 
 dat <- dat[complete.cases(dat),]
-
-rm(dd_dat)
+# 
+# rm(dd_dat)
 
 mod <- felm(ln_corn_grain_a ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq + 
-                dday0_10_rm10 + dday10_30_rm10 + dday30_rm10 + prec_rm10 + prec_sq_rm10 
-            | fips + factor(state):trend | 0 | state, 
+                dday0_10_rm10 + dday10_30_rm10 + dday30_rm10 + prec_rm10 + prec_sq_rm10 +
+              trend + trend_sq
+            | fips | 0 | 0, 
            data = dat, psdef=FALSE, weights = dat$corn_grain_a)
 summary(mod)
 
@@ -118,18 +140,6 @@ modmat <- dplyr::select(dat, dday0_10, dday10_30, dday30, prec, prec_sq,
 modmat <- as.matrix(modmat)
 
 fit <- modmat %*% cf
-head(fit)
-# head(pmod$fit)
-
-# fit <- exp(fit + pmod$effect + mod$residuals)
-
-head(dat$ln_corn_grain_a)
-head(dat$corn_grain_a)
-head(fit)
-
-
-sum(fit)
-sum(dat$corn_grain_a)
 
 fitdat <- data.frame(year = dat$year,
                      state = dat$state,
@@ -141,13 +151,13 @@ fitdat <- left_join(fitdat, zip_codes, by = c("fips"))
 fitdat <- left_join(fitdat, fe, by = c("fips"))
 fitdat$decade <- fitdat$year - (fitdat$year %% 10)
 head(fitdat)
-fitdat$fit <- exp(fitdat$pred + fitdat$residuals + fitdat$effect)
+fitdat$fit <- exp(fitdat$pred + fitdat$effect)
 head(fitdat)
 head(dat$corn_grain_a)
 
 # Centroid calculations
 fitdat <- fitdat %>% 
-  group_by(year, decade) %>% 
+  group_by(year) %>% 
   mutate(X_it = fit * long,
          Y_it = fit * lat) %>% 
   summarise(X = sum(X_it, na.rm = TRUE)/(sum(fit, na.rm = TRUE)),
@@ -157,14 +167,25 @@ fitdat <- fitdat %>%
   mutate(X_lead = lead(X),
          Y_lead = lead(Y)) %>% 
   ungroup()
-dat <- filter(dat, !is.na(X))
 head(fitdat)
 
 dat <- as.data.frame(dat)
 
 usa_center = as.numeric(geocode("USA"))
-USAMap = ggmap(get_googlemap(center=usa_center, scale=2, zoom=5), extent="normal")
-USAMap + geom_point(aes(x=X, y = Y, color = factor(decade)), size = 0.5, data = fitdat) +
-  geom_segment(data = fitdat, aes(x = X, y = Y, xend = X_lead, yend = Y_lead, color=factor(decade)), arrow = arrow(length=unit(0.15,"cm")))
+USAMap <- ggmap(get_googlemap(center=usa_center, scale=2, zoom=5), extent="normal")
+USAMap + geom_point(aes(x=X, y = Y, color = factor(year)), size = 0.5, data = fitdat) +
+  geom_segment(data = fitdat, aes(x = X, y = Y, xend = X_lead, yend = Y_lead, color=factor(year)), arrow = arrow(length=unit(0.15,"cm")))
 
 
+
+map <- get_googlemap(center=usa_center, scale=2, zoom=5)
+p <- ggmap(map) +
+  geom_point(dat, aes(x=long, y=lat, fill=ln_corn_yield, frame=year)) +
+  scale_fill_distiller(palette = "Spectral")
+p
+gganimate(p, interval = 0.05, filename = "figures/animate_corn_yield.gif")
+
+
+
+ggmap(map) +
+  geom_point(data=filter(dat, year == 19), aes(x=long, y=lat, fill=ln_corn_yield))
