@@ -212,12 +212,12 @@ fulldat$trend_sq <- fulldat$trend^2
 
 # Save fulldat
 
-fulldat <- filter(fulldat, abs(long) <= 100 )
+# fulldat <- filter(fulldat, abs(long) <= 100 )
 fulldat$state <- factor(fulldat$state)
 
 fulldat <- left_join(fulldat, county.fips, by = c("fips"))
-
-decade_dummy <- dummyCreator(fulldat$year, prefix = "d")
+fulldat$decade <- fulldat$year - (fulldat$year %% 10)
+decade_dummy <- dummyCreator(fulldat$decade, prefix = "d")
 fulldat <- cbind(fulldat, decade_dummy)
 
 saveRDS(fulldat, "data/full_ag_data.rds")
@@ -226,7 +226,8 @@ fulldat <- readRDS("data/full_ag_data.rds")
 
 regdat <- filter(fulldat, !is.na(corn_grain_a))
 
-fit <- felm(ln_corn_yield ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq + trend + trend_sq | fips | 0 | state, 
+fit <- felm(ln_corn_yield ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq + state:trend + state:trend_sq 
+            | fips | 0 | state, 
             data = regdat, weights = regdat$corn_grain_a)
 summary(fit)
 

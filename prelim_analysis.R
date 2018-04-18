@@ -14,6 +14,7 @@ cropdat <- readRDS("data/full_ag_data.rds")
 cropdat$state <- factor(cropdat$state)
 cropdat <- filter(cropdat, !is.na(corn_grain_a))
 cropdat$decade <- cropdat$year - (cropdat$year %% 10)
+cropdat$twenty <- cropdat$year - (cropdat$year %% 20)
 
 # Great Plains Region
 co <- c(8001,8005,8009,8011,8013,8017,8019,8025,8027,8031,8035,8039,8041,8043,8047,8055,8059,8061,8063,8069,8071,8073,8075,8087,8089,8093,8095,8099,8101,8115,8119,8121,8123,8125)
@@ -35,7 +36,7 @@ cm <- filter(cm, fips %in% gp_fips)
 cm <- filter(cm, year == 1930)
 cm <- select(cm, fips, corn_yield)
 names(cm) <- c("fips", "value")
-check_map(cm) + theme(legend.position = "none")
+check_map(cm$fips, cm$value) + theme(legend.position = "none")
 ggsave("figures/map_counties.pdf", width = 6, height = 6)
 
 cropdat <- filter(cropdat, fips %in% gp_fips)
@@ -63,249 +64,64 @@ cropdat <- cropdat %>%
   ungroup()
 
 
-# Maps
+regdat <- filter(cropdat, !is.na(corn_grain_a))
 
-
-
-#----------------------------------------------------------------------
-# Corn Yield
-ggplot(cropdat, aes(year, corn_yield_dm, color = state)) + geom_smooth() +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey") +
-  theme_tufte(base_size = 12) +
-  xlab(NULL) +
-  ylab("Corn Yield (w/ County FE)") +
-  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf, color = "grey") +
-  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey") +
-  scale_x_continuous(breaks = seq(1910, 2010, 10)) +
-  theme(legend.position = "right",
-    # legend.justification = c("left", "top"),
-    legend.box.background = element_rect(colour = "grey"),
-    legend.title = element_blank(), legend.key = element_blank()) 
-ggsave("figures/corn_yield_ts.pdf", width = 6, height = 4) 
-
-ggplot(cropdat, aes(year, dday10_30, color = state)) + geom_smooth() +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey") +
-  theme_tufte(base_size = 12) +
-  xlab(NULL) +
-  ylab("Degree Day 10-30 (w/ County FE)") +
-  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf, color = "grey") +
-  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey") +
-  scale_x_continuous(breaks = seq(1910, 2010, 10)) +
-  theme(legend.position = "right",
-    # legend.justification = c("left", "top"),
-    legend.box.background = element_rect(colour = "grey"),
-    legend.title = element_blank(), legend.key = element_blank()) 
-
-ggplot(cropdat, aes(year, dday30, color = state)) + geom_smooth() +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey") +
-  theme_tufte(base_size = 12) +
-  xlab(NULL) +
-  ylab("Degree Day 30C (w/ County FE)") +
-  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf, color = "grey") +
-  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey") +
-  scale_x_continuous(breaks = seq(1910, 2010, 10)) +
-  theme(legend.position = "right",
-    # legend.justification = c("left", "top"),
-    legend.box.background = element_rect(colour = "grey"),
-    legend.title = element_blank(), legend.key = element_blank()) 
-
-
-ggplot(cropdat, aes(y = ln_corn_yield_dm, x = dday30)) + 
-  theme_tufte(base_size = 12) +
-  xlab("Degree Day 30C") +
-  ylab("Log(Corn Yield) w/ County FE") +
-  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf, color = "grey") +
-  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey") +
-  geom_point(alpha = 0.25) + 
-  geom_smooth(method = "lm") + 
-  theme(legend.position = "none",
-    # legend.justification = c("left", "top"),
-    legend.box.background = element_rect(colour = "grey"),
-    legend.title = element_blank(), legend.key = element_blank()) +
-  facet_wrap(~decade)
-ggsave("figures/ln_corn_yield_dday30.pdf", width = 6, height = 4)
-
-ggplot(cropdat, aes(y = ln_corn_yield_dm, x = dday10_30)) + 
-  theme_tufte(base_size = 10) +
-  xlab("Degree Day 10-30C") +
-  ylab("Log(Corn Yield) w/ County FE") +
-  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf, color = "grey") +
-  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey") +
-  geom_point(alpha = 0.25) + 
-  geom_smooth(method = "lm") + 
-  theme(legend.position = "none",
-    # legend.justification = c("left", "top"),
-    legend.box.background = element_rect(colour = "grey"),
-    legend.title = element_blank(), legend.key = element_blank()) +
-  facet_wrap(~decade)
-ggsave("figures/ln_corn_yield_dday10_30.pdf", width = 6, height = 4)
-
-
-
-#----------------------------------------------------------------------
-# Ag Revenue
-ggplot(cropdat, aes(year, value_crops_dm, color = state)) + geom_smooth() +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey") +
-  theme_tufte(base_size = 12) +
-  xlab(NULL) +
-  ylab("Value of Crops (w/ County FE)") +
-  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf, color = "grey") +
-  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey") +
-  scale_x_continuous(breaks = seq(1910, 2010, 10)) +
-  theme(legend.position = "right",
-    # legend.justification = c("left", "top"),
-    legend.box.background = element_rect(colour = "grey"),
-    legend.title = element_blank(), legend.key = element_blank()) 
-ggsave("figures/value_crops_ts.pdf", width = 6, height = 4) 
-
-ggplot(cropdat, aes(y = ln_value_crops_dm, x = dday30)) + 
-  theme_tufte(base_size = 10) +
-  xlab("Degree Day 30C") +
-  ylab("Log(Corn Yield)") +
-  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf, color = "grey") +
-  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey") +
-  geom_point(alpha = 0.25) + 
-  geom_smooth(method = "lm") + 
-  theme(legend.position = "none",
-    # legend.justification = c("left", "top"),
-    legend.box.background = element_rect(colour = "grey"),
-    legend.title = element_blank(), legend.key = element_blank()) +
-  facet_wrap(~decade)
-ggsave("figures/ln_value_crops_dday30.pdf", width = 6, height = 4)
-
-#----------------------------------------------------------------------
-# Farmland Value
-ggplot(cropdat, aes(year, value_landbuildings_dm, color = state)) + geom_smooth() +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey") +
-  theme_tufte(base_size = 12) +
-  xlab(NULL) +
-  ylab("Farmland Values (w/ County FE)") +
-  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf, color = "grey") +
-  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey") +
-  scale_x_continuous(breaks = seq(1910, 2010, 10)) +
-  theme(legend.position = "right",
-    # legend.justification = c("left", "top"),
-    legend.box.background = element_rect(colour = "grey"),
-    legend.title = element_blank(), legend.key = element_blank()) 
-ggsave("figures/value_landbuildings_ts.pdf", width = 6, height = 4) 
-
-ggplot(cropdat, aes(y = ln_value_landbuildings, x = dday30)) + 
-  theme_tufte(base_size = 10) +
-  xlab("Degree Day 30C") +
-  ylab("Log(Farmland Values)") +
-  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf, color = "grey") +
-  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey") +
-  geom_point(alpha = 0.25) + 
-  geom_smooth(method = "lm") + 
-  theme(legend.position = "none",
-    # legend.justification = c("left", "top"),
-    legend.box.background = element_rect(colour = "grey"),
-    legend.title = element_blank(), legend.key = element_blank()) +
-  facet_wrap(~decade)
-ggsave("figures/ln_value_landbuildings_dday30.pdf", width = 6, height = 4)
-
-
-# Climate
-ggplot(cropdat, aes(corn_yield, dday0_10_rm10, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
-ggplot(cropdat, aes(corn_yield, dday10_30_rm10, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
-ggplot(cropdat, aes(corn_yield, dday30_rm10, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
-ggplot(cropdat, aes(corn_yield, prec, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
-ggplot(cropdat, aes(corn_yield, prec^2, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
-ggplot(cropdat, aes(corn_yield, prec_rm10, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
-ggplot(cropdat, aes(corn_yield, prec_rm10^2, color = state)) + geom_point(alpha = 0.25) + geom_smooth(method = "lm")
+fit <- felm(ln_corn_yield ~ dday10_30 + dday30 + prec + prec_sq + 
+              dday10_30_rm10 + dday30_rm10 + prec_rm10 + prec_sq_rm10 +
+              state:year + state:I(year^2) | fips | 0 | state, 
+            data = regdat, weights = regdat$corn_grain_a, psdef=FALSE)
+summary(fit)
 
 # Corn yield
-ggplot(cropdat, aes(year, corn_yield_dm, color = factor(state))) + geom_smooth()
+ggplot(cropdat, aes(year, corn_yield, color = factor(state))) + geom_smooth()
 
-# regdat <- filter(cropdat, state %in% c("ks", "nm", "co"))
-fit <- felm(ln_corn_yield ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq + 
-             trend_lat + trend_long + trend_sq_lat + trend_sq_long | fips | 0 | state, 
-           data = cropdat, weights = cropdat$w)
+fit <- felm(log(1+value_landbuildings) ~ state:trend + state:trend_sq + 
+              factor(decade):dday10_30 + factor(decade):dday30 + 
+              factor(decade):prec + factor(decade):prec_sq | fips | 0 | 0, 
+            data = cropdat)
+
 summary(fit)
 
-outdat <- data.frame()
-for (i in unique(cropdat$year)){
-  regdat <- filter(cropdat, year == i)
-  
-  fit <- felm(ln_corn_yield ~ dday10_30 + dday30 + prec + prec_sq + 
-                dday0_10_rm10 + dday10_30_rm10 + dday30_rm10 + prec_rm10 + prec_sq_rm10 | state | 0 | 0, 
-           data = regdat, psdef=FALSE, weights = regdat$corn_grain_a)
-  coef <- 100*fit$coefficients[2]
-  se <- 100*fit$se[2]
-  indat <- data.frame(year = i, coef = coef, se = se)
-  outdat <- rbind(outdat, indat)
-}
+coef <- fit$coefficients[30:38]
+se <- fit$se[30:38]
 
-ggplot(outdat, aes(year, coef)) + 
-  theme_tufte(base_size = 12) +
-  geom_line(linetype = "dashed", alpha = 0.3) +
-  geom_point() + 
-  geom_errorbar(aes(ymin = (coef - 1.96*se), ymax = (coef + 1.96*se)), width = 1.5, alpha = 0.5) +
+ggplot(NULL, aes(x = seq(1910, 1990, 10), y = coef)) + geom_point() + geom_line() +
+  geom_errorbar(aes(ymin = coef - 1.96*se, ymax = coef + 1.96*se), width = .5) +
+  scale_x_continuous(breaks = seq(1910, 1990, 10)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey") +
-  # ylim(-0.5, 0.01) +
+  theme_tufte(base_size = 10) +
   xlab("Decade") +
-  ylab("Degree Day (10-30C) Coefficient") +
-  scale_x_continuous(breaks = c(seq(1910, 2000, 10))) +
+  ylab("Degree Day (30C) Coefficient \n Weather-effect") +
   annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf, color = "grey") +
-  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey")
+  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey") +
+  theme(legend.position = "none",
+    # legend.justification = c("left", "top"),
+    legend.box.background = element_rect(colour = "grey"),
+    legend.title = element_blank(), legend.key = element_blank())
 
 
-cropdat <- cropdat %>% 
-  group_by(fips) %>% 
-  arrange(year) %>% 
-  mutate(ln_corn_yield_lag = lag(ln_corn_yield, 1))
-
-thirty <- filter(cropdat, year >= 1930 & year <= 1939)
-
-thirty <- thirty %>% 
-  group_by(fips) %>% 
-  mutate(corn_yield_avg = mean(corn_yield, na.rm = TRUE)) %>% 
-  select(fips, corn_yield_avg)
-
-cropdat <- left_join(cropdat, thirty, by = c("fips"))
-cropdat$diff_corn_yield <- cropdat$corn_yield - cropdat$corn_yield_avg
-
-ggplot(filter(cropdat, year >= 1940), aes(year, corn_yield)) + geom_smooth()
-
-fit <- felm(ln_corn_yield ~ dday0_10 + dday10_30 + dday30 + prec + prec_sq + region
-               | 0 | 0 | 0, 
-           data = cropdat, weights = cropdat$w)
+fit <- felm(log(1+value_landbuildings) ~ state:trend + state:trend_sq + 
+              factor(decade):dday10_30_rm10 + factor(decade):dday30_rm10 + 
+              factor(decade):prec_rm10 + factor(decade):prec_sq_rm10 | fips | 0 | 0, 
+            data = cropdat, weights = cropdat$corn_grain_a)
 
 summary(fit)
 
-fit <- felm(ln_corn_yield ~ state:year + state:I(year^2) +
-            d_1910:(dday30) + d_1920:(dday30) + d_1925:(dday30) + d_1930:(dday30) + 
-            d_1935:(dday30) + d_1940:(dday30) + d_1945:(dday30) + d_1950:(dday30) + 
-            d_1954:(dday30) + d_1959:(dday30) + d_1964:(dday30) + 
-            d_1978:(dday30) + d_1982:(dday30) + d_1987:(dday30) +
-            d_1992:(dday30) + d_1997:(dday30) | fips | 0 | 0, 
-           data = cropdat, psdef=FALSE, weights = cropdat$corn_grain_a)
+coef <- fit$coefficients[30:38]
+se <- fit$se[30:38]
+
+ggplot(NULL, aes(x = seq(1910, 1990, 10), y = coef)) + geom_point() + geom_line() +
+  geom_errorbar(aes(ymin = coef - 1.96*se, ymax = coef + 1.96*se), width = .5) +
+  scale_x_continuous(breaks = seq(1910, 1990, 10)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey") +
+  theme_tufte(base_size = 10) +
+  xlab("Decade") +
+  ylab("Degree Day (30C) Coefficient \n Climate-effect (10-year)") +
+  annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf, color = "grey") +
+  annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf, color = "grey") +
+  theme(legend.position = "none",
+    # legend.justification = c("left", "top"),
+    legend.box.background = element_rect(colour = "grey"),
+    legend.title = element_blank(), legend.key = element_blank()) 
 
 
-summary(fit)
-test <- filter(cropdat, year == 1910)
-felm(ln_corn_yield ~ dday10_30 + dday30 + prec + prec_sq | state | 0 | 0, data = test, weights = test$corn_grain_a)
-
-test <- filter(cropdat, year == 1910)
-test <- filter(test, !is.na(corn_yield))
-test <- filter(test, !is.na(region))
-test <- as.data.frame(test)
-test <- dplyr::select(test, region, corn_yield)
-
-md <- matchit(region ~ corn_yield, data = test, method="nearest", ratio=1)
-summary(md)
-md$match.matrix
-md$match.matrix
-md$discarded
-
-ggplot(cropdat, aes(factor(year), corn_yield_dm, color = factor(region))) + geom_boxplot()
-  
-
-dat1 <- match.data(md, group = "control")
-dat2 <- match.data(md, group = "treat")
-
-mean(dat1$corn_yield)
-mean(dat2$corn_yield)
-
-head(arrange(dat1, distance))
-head(arrange(dat2, distance))
