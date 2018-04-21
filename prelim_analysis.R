@@ -78,15 +78,15 @@ summary(fit)
 # Corn yield
 ggplot(cropdat, aes(year, corn_yield, color = factor(state))) + geom_smooth()
 
-fit <- felm(ln_cropland ~ state:trend + state:trend_sq + 
+fit <- felm(ln_corn_yield ~ state:trend + state:trend_sq + 
               factor(decade):dday10_30 + factor(decade):dday30 + 
               factor(decade):prec + factor(decade):prec_sq | fips | 0 | 0, 
-            data = cropdat)
+            data = cropdat, weight = cropdat$corn_grain_a)
 
 summary(fit)
 
-coef <- fit$coefficients[29:36]
-se <- fit$se[29:36]
+coef <- fit$coefficients[30:38]
+se <- fit$se[30:38]
 
 ggplot(NULL, aes(x = seq(1910, 1990, 10), y = coef)) + geom_point() + geom_line() +
   geom_errorbar(aes(ymin = coef - 1.96*se, ymax = coef + 1.96*se), width = .5) +
@@ -101,7 +101,7 @@ ggplot(NULL, aes(x = seq(1910, 1990, 10), y = coef)) + geom_point() + geom_line(
     # legend.justification = c("left", "top"),
     legend.box.background = element_rect(colour = "grey"),
     legend.title = element_blank(), legend.key = element_blank())
-
+ggsave("figures/dd30_coef.pdf", width=6, height=4)
 
 fit <- felm(ln_farmland~ state:trend + state:trend_sq + 
               factor(decade):dday10_30_rm10 + factor(decade):dday30_rm10 + 
