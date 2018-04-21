@@ -94,14 +94,14 @@ stateabb$name <- tolower(stateabb$name)
 # Merge historical Haines data
 hdat <- read_dta("data/DustBowl_All_base1910.dta")
 hdat <- dplyr::select(hdat, year, fips, corn_grain_a, corn_grain_y, cotton_a, cotton_y,
-               hay_a, hay_y, wheat_a, wheat_y, value_landbuildings, value_crops)
+               hay_a, hay_y, wheat_a, wheat_y, farmland, cropland, value_landbuildings, value_crops)
 # hdat[hdat == 0] <- NA
 
 hdat$year <- as.integer(hdat$year)
 hdat$fips <- as.integer(hdat$fips)
 
-names(hdat)[3:12] <- c("corn_grain_a", "corn_grain_p", "cotton_a", "cotton_p", "hay_a",
-                       "hay_p", "wheat_a", "wheat_p", "value_landbuildings", "value_crops")
+names(hdat)[3:14] <- c("corn_grain_a", "corn_grain_p", "cotton_a", "cotton_p", "hay_a",
+                       "hay_p", "wheat_a", "wheat_p", "farmland", "cropland", "value_landbuildings", "value_crops")
 
 hdat <- left_join(hdat, zip_codes, by = c("fips"))
 cropdat <- hdat
@@ -217,8 +217,31 @@ fulldat$state <- factor(fulldat$state)
 
 fulldat <- left_join(fulldat, county.fips, by = c("fips"))
 fulldat$decade <- fulldat$year - (fulldat$year %% 10)
-decade_dummy <- dummyCreator(fulldat$decade, prefix = "d")
-fulldat <- cbind(fulldat, decade_dummy)
+
+fulldat <- fulldat %>% 
+  group_by(fips) %>% 
+  mutate(dday0_10_dm = dday0_10 - mean(dday0_10, na.rm = TRUE),
+         dday10_30_dm = dday10_30 - mean(dday10_30, na.rm = TRUE),
+         dday30_dm = dday30 - mean(dday30, na.rm = TRUE),
+         prec_dm = prec - mean(prec, na.rm = TRUE),
+         prec_sq_dm = prec_dm^2,
+         corn_yield_dm = corn_yield - mean(corn_yield, na.rm = TRUE),
+         dday30_rm10_dm = dday30_rm10 - mean(dday30_rm10, na.rm = TRUE),
+         prec_dm = prec - mean(prec, na.rm = TRUE),
+         ln_corn_yield = log(1 + corn_yield),
+         ln_corn_yield_dm = ln_corn_yield - mean(ln_corn_yield, na.rm = TRUE),
+         ln_farmland = log(1 + farmland),
+         ln_cropland = log(1 + cropland),
+         ln_farmland_dm = ln_farmland - mean(ln_farmland, na.rm = TRUE),
+         value_crops_dm = value_crops - mean(value_crops, na.rm = TRUE),
+         ln_value_crops = log(1 + value_crops),
+         value_landbuildings_dm = value_landbuildings - mean(value_landbuildings, na.rm = TRUE),
+         ln_value_landbuildings = log(1 + value_landbuildings),
+         corn_w = roll_mean(corn_grain_a, 3, .01)) %>% 
+  ungroup()
+
+dat$trend <- dat$year - (min(dat$year - 1))
+dat$trend_sq <- dat$trend^2
 
 saveRDS(fulldat, "data/full_ag_data.rds")
 fulldat <- readRDS("data/full_ag_data.rds")

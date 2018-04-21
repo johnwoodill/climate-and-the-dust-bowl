@@ -55,6 +55,9 @@ cropdat <- cropdat %>%
          prec_dm = prec - mean(prec, na.rm = TRUE),
          ln_corn_yield = log(1 + corn_yield),
          ln_corn_yield_dm = ln_corn_yield - mean(ln_corn_yield, na.rm = TRUE),
+         ln_farmland = log(1 + farmland),
+         ln_cropland = log(1 + cropland),
+         ln_farmland_dm = ln_farmland - mean(ln_farmland, na.rm = TRUE),
          # value_crops_dm = value_crops - mean(value_crops, na.rm = TRUE),
          # ln_value_crops = log(1 + value_crops),
          # value_landbuildings_dm = value_landbuildings - mean(value_landbuildings, na.rm = TRUE),
@@ -66,24 +69,24 @@ cropdat <- cropdat %>%
 
 regdat <- filter(cropdat, !is.na(corn_grain_a))
 
-fit <- felm(ln_corn_yield ~ dday10_30 + dday30 + prec + prec_sq + 
-              dday10_30_rm10 + dday30_rm10 + prec_rm10 + prec_sq_rm10 +
-              state:year + state:I(year^2) | fips | 0 | state, 
-            data = regdat, weights = regdat$corn_grain_a, psdef=FALSE)
+fit <- felm(ln_cropland ~ dday10_30 + dday30 + prec + prec_sq + 
+              # dday10_30_rm10 + dday30_rm10 + prec_rm10 + prec_sq_rm10 +
+              state:trend + state:I(trend^2) | fips | 0 | state, 
+            data = regdat, psdef=FALSE)
 summary(fit)
 
 # Corn yield
 ggplot(cropdat, aes(year, corn_yield, color = factor(state))) + geom_smooth()
 
-fit <- felm(log(1+value_landbuildings) ~ state:trend + state:trend_sq + 
+fit <- felm(ln_cropland ~ state:trend + state:trend_sq + 
               factor(decade):dday10_30 + factor(decade):dday30 + 
               factor(decade):prec + factor(decade):prec_sq | fips | 0 | 0, 
             data = cropdat)
 
 summary(fit)
 
-coef <- fit$coefficients[30:38]
-se <- fit$se[30:38]
+coef <- fit$coefficients[29:36]
+se <- fit$se[29:36]
 
 ggplot(NULL, aes(x = seq(1910, 1990, 10), y = coef)) + geom_point() + geom_line() +
   geom_errorbar(aes(ymin = coef - 1.96*se, ymax = coef + 1.96*se), width = .5) +
@@ -100,15 +103,15 @@ ggplot(NULL, aes(x = seq(1910, 1990, 10), y = coef)) + geom_point() + geom_line(
     legend.title = element_blank(), legend.key = element_blank())
 
 
-fit <- felm(log(1+value_landbuildings) ~ state:trend + state:trend_sq + 
+fit <- felm(ln_farmland~ state:trend + state:trend_sq + 
               factor(decade):dday10_30_rm10 + factor(decade):dday30_rm10 + 
               factor(decade):prec_rm10 + factor(decade):prec_sq_rm10 | fips | 0 | 0, 
             data = cropdat, weights = cropdat$corn_grain_a)
 
 summary(fit)
 
-coef <- fit$coefficients[30:38]
-se <- fit$se[30:38]
+coef <- fit$coefficients[29:37]
+se <- fit$se[29:37]
 
 ggplot(NULL, aes(x = seq(1910, 1990, 10), y = coef)) + geom_point() + geom_line() +
   geom_errorbar(aes(ymin = coef - 1.96*se, ymax = coef + 1.96*se), width = .5) +
