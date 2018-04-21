@@ -16,6 +16,14 @@ cropdat <- filter(cropdat, !is.na(corn_grain_a))
 cropdat$decade <- cropdat$year - (cropdat$year %% 10)
 cropdat$twenty <- cropdat$year - (cropdat$year %% 20)
 
+hdat <- read_csv("data/state_hybrid_corn.csv")
+hdat <- gather(hdat, key = year, value = value, -state)
+hdat$year <- as.numeric(hdat$year)
+names(hdat)[3] <- 'hybrid_corn'
+hdat$state <- tolower(hdat$state)
+
+cropdat <- left_join(cropdat, hdat, by = c("year", "state"))
+
 # Great Plains Region
 co <- c(8001,8005,8009,8011,8013,8017,8019,8025,8027,8031,8035,8039,8041,8043,8047,8055,8059,8061,8063,8069,8071,8073,8075,8087,8089,8093,8095,8099,8101,8115,8119,8121,8123,8125)
 ks <- c(20007,20009,20023,20025,20033,20039,20047,20051,20053,20055,20057,20063,20065,20067,20069,20071,20075,20077,20081,20083,20089,20093,20095,20097,20101,20105,20109,20119,20123,20129,20135,20137,20141,20145,20147,20151,20153,20155,20159,20163,20165,20167,20171,20175,20179,20181,20183,20185,20187,20189,20193,20195,20199,20203)
@@ -78,9 +86,11 @@ summary(fit)
 # Corn yield
 ggplot(cropdat, aes(year, corn_yield, color = factor(state))) + geom_smooth()
 
+cropdat <- filter(cropdat, year >= 1935)
+
 fit <- felm(ln_corn_yield ~ state:trend + state:trend_sq + 
-              factor(decade):dday10_30 + factor(decade):dday30 + 
-              factor(decade):prec + factor(decade):prec_sq | fips | 0 | 0, 
+              hybrid_corn:factor(decade):dday10_30 + hybrid_corn:factor(decade):dday30 + 
+              hybrid_corn:factor(decade):prec + hybrid_corn:factor(decade):prec_sq | fips | 0 | 0, 
             data = cropdat, weight = cropdat$corn_grain_a)
 
 summary(fit)
